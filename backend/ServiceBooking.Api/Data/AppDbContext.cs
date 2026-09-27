@@ -8,4 +8,15 @@ public class AppDbContext : DbContext
         : base(options)
     {
     }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        // Automatically discovers all IEntityTypeConfiguration<T>
+        // implementations in the current assembly.
+        modelBuilder.ApplyConfigurationsFromAssembly(
+            typeof(AppDbContext).Assembly
+        );
+    }
 }
