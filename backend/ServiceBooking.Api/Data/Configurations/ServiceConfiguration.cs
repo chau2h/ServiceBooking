@@ -8,7 +8,17 @@ public class ServiceConfiguration : IEntityTypeConfiguration<Service>
 {
     public void Configure(EntityTypeBuilder<Service> builder)
     {
-        builder.ToTable("Services");
+        builder.ToTable("Services", table =>
+        {
+            // Business data integrity constraints.
+            table.HasCheckConstraint(
+                "CK_Services_DurationMinutes_Positive",
+                "\"DurationMinutes\" > 0");
+
+            table.HasCheckConstraint(
+                "CK_Services_Price_NonNegative",
+                "\"Price\" >= 0");
+        });
 
         builder.HasKey(service => service.Id);
 
@@ -46,7 +56,14 @@ public class ServiceConfiguration : IEntityTypeConfiguration<Service>
             .IsRequired()
             .HasColumnName("UpdatedAt");
 
-        // A service can be used by many bookings.
+        // Supports service listing/search and filtering.
+        builder.HasIndex(service => new
+            {
+                service.IsActive,
+                service.Name
+            })
+            .HasDatabaseName("IX_Services_IsActive_Name");
+
         builder.HasMany(service => service.Bookings)
             .WithOne(booking => booking.Service)
             .HasForeignKey(booking => booking.ServiceId)

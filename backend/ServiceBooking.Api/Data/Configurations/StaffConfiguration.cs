@@ -38,13 +38,16 @@ public class StaffConfiguration : IEntityTypeConfiguration<Staff>
             .IsRequired()
             .HasColumnName("UpdatedAt");
 
-        // A staff member can have many work schedules.
+        // Staff email must be unique inside the Staffs table.
+        builder.HasIndex(staff => staff.Email)
+            .IsUnique()
+            .HasDatabaseName("UX_Staffs_Email");
+
         builder.HasMany(staff => staff.WorkSchedules)
             .WithOne(schedule => schedule.Staff)
             .HasForeignKey(schedule => schedule.StaffId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // A staff member can handle many bookings.
         builder.HasMany(staff => staff.Bookings)
             .WithOne(booking => booking.Staff)
             .HasForeignKey(booking => booking.StaffId)

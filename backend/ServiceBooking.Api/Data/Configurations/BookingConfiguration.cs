@@ -10,7 +10,16 @@ public class BookingConfiguration
 {
     public void Configure(EntityTypeBuilder<Booking> builder)
     {
-        builder.ToTable("Bookings");
+        builder.ToTable("Bookings", table =>
+        {
+            table.HasCheckConstraint(
+                "CK_Bookings_StartBeforeEnd",
+                "\"StartTime\" < \"EndTime\"");
+
+            table.HasCheckConstraint(
+                "CK_Bookings_Status",
+                "\"Status\" IN ('Pending', 'Confirmed', 'Completed', 'Cancelled')");
+        });
 
         builder.HasKey(booking => booking.Id);
 
@@ -60,19 +69,47 @@ public class BookingConfiguration
             .IsRequired()
             .HasColumnName("CreatedAt");
 
-        // Booking.CustomerId -> Users.Id
+        // BookingCode must be unique.
+        builder.HasIndex(booking => booking.BookingCode)
+            .IsUnique()
+            .HasDatabaseName("UX_Bookings_BookingCode");
+
+        // Customer booking history.
+        builder.HasIndex(booking => new
+            {
+                booking.CustomerId,
+                booking.CreatedAt
+            })
+            .HasDatabaseName("IX_Bookings_CustomerId_CreatedAt");
+
+        // Useful for admin filtering by status.
+        builder.HasIndex(booking => new
+            {
+                booking.Status,
+                booking.CreatedAt
+            })
+            .HasDatabaseName("IX_Bookings_Status_CreatedAt");
+
+        // Main access path for staff booking/conflict queries.
+        builder.HasIndex(booking => new
+            {
+                booking.StaffId,
+                booking.StartTime,
+                booking.EndTime,
+                booking.Status
+            })
+            .HasDatabaseName("IX_Bookings_StaffId_StartTime_EndTime_Status");
+
         builder.HasOne(booking => booking.Customer)
             .WithMany(user => user.Bookings)
             .HasForeignKey(booking => booking.CustomerId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Booking.ServiceId -> Services.Id
         builder.HasOne(booking => booking.Service)
             .WithMany(service => service.Bookings)
             .HasForeignKey(booking => booking.ServiceId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Booking.StaffId -> Staffs.Id
         builder.HasOne(booking => booking.Staff)
             .WithMany(staff => staff.Bookings)
             .HasForeignKey(booking => booking.StaffId)

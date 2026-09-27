@@ -9,7 +9,12 @@ public class WorkScheduleConfiguration
 {
     public void Configure(EntityTypeBuilder<WorkSchedule> builder)
     {
-        builder.ToTable("WorkSchedules");
+        builder.ToTable("WorkSchedules", table =>
+        {
+            table.HasCheckConstraint(
+                "CK_WorkSchedules_StartBeforeEnd",
+                "\"StartTime\" < \"EndTime\"");
+        });
 
         builder.HasKey(schedule => schedule.Id);
 
@@ -36,7 +41,14 @@ public class WorkScheduleConfiguration
             .IsRequired()
             .HasColumnName("CreatedAt");
 
-        // StaffId is the foreign key to Staffs.Id.
+        // Main lookup pattern when loading a staff member's schedule for a date.
+        builder.HasIndex(schedule => new
+            {
+                schedule.StaffId,
+                schedule.WorkDate
+            })
+            .HasDatabaseName("IX_WorkSchedules_StaffId_WorkDate");
+
         builder.HasOne(schedule => schedule.Staff)
             .WithMany(staff => staff.WorkSchedules)
             .HasForeignKey(schedule => schedule.StaffId)

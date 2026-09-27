@@ -8,7 +8,12 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 {
     public void Configure(EntityTypeBuilder<User> builder)
     {
-        builder.ToTable("Users");
+        builder.ToTable("Users", table =>
+        {
+            table.HasCheckConstraint(
+                "CK_Users_Role",
+                "\"Role\" IN ('Customer', 'Admin')");
+        });
 
         builder.HasKey(user => user.Id);
 
@@ -45,8 +50,11 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .IsRequired()
             .HasColumnName("CreatedAt");
 
-        // A user can create many bookings.
-        // CustomerId in Bookings references Users.Id.
+        // Email must be unique inside the Users table.
+        builder.HasIndex(user => user.Email)
+            .IsUnique()
+            .HasDatabaseName("UX_Users_Email");
+
         builder.HasMany(user => user.Bookings)
             .WithOne(booking => booking.Customer)
             .HasForeignKey(booking => booking.CustomerId)
