@@ -28,9 +28,6 @@ public sealed class AuthService(
             email,
             cancellationToken);
 
-        // Do not reveal whether the email exists.
-        // Both "user not found" and "wrong password" return
-        // the same authentication error to avoid account enumeration.
         if (user is null || !user.IsActive)
         {
             throw new UnauthorizedException(
@@ -58,13 +55,36 @@ public sealed class AuthService(
             AccessToken = accessToken,
             TokenType = "Bearer",
             ExpiresIn = _jwtOptions.ExpirationMinutes * 60,
-            User = new AuthenticatedUserResponse
-            {
-                Id = user.Id,
-                FullName = user.FullName,
-                Email = user.Email,
-                Role = user.Role.ToString()
-            }
+            User = MapUser(user)
+        };
+    }
+
+    public async Task<AuthenticatedUserResponse> GetCurrentUserAsync(
+        long userId,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await userRepository.GetByIdAsync(
+            userId,
+            cancellationToken);
+
+        if (user is null || !user.IsActive)
+        {
+            throw new UnauthorizedException(
+                "AUTHENTICATED_USER_NOT_FOUND",
+                "The authenticated user is no longer available.");
+        }
+
+        return MapUser(user);
+    }
+
+    private static AuthenticatedUserResponse MapUser(User user)
+    {
+        return new AuthenticatedUserResponse
+        {
+            Id = user.Id,
+            FullName = user.FullName,
+            Email = user.Email,
+            Role = user.Role.ToString()
         };
     }
 }
