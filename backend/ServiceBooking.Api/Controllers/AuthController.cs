@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using ServiceBooking.Api.Common.Exceptions;
 using ServiceBooking.Api.DTOs.Auth;
 using ServiceBooking.Api.Services.Interfaces;
+using ServiceBooking.Api.Common.Constants;
 
 namespace ServiceBooking.Api.Controllers;
 
@@ -34,7 +35,7 @@ public sealed class AuthController(
         return Ok(response);
     }
 
-    [Authorize]
+    [Authorize(Policy = AuthorizationPolicies.Authenticated)]
     [HttpGet("me")]
     [ProducesResponseType(
         typeof(AuthenticatedUserResponse),

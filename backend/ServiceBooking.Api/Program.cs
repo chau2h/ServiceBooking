@@ -6,6 +6,7 @@ using ServiceBooking.Api.Common.Options;
 using ServiceBooking.Api.Data;
 using ServiceBooking.Api.Extensions;
 using ServiceBooking.Api.Middleware;
+using ServiceBooking.Api.Common.Constants;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -74,7 +75,22 @@ builder.Services
             };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(
+        AuthorizationPolicies.Authenticated,
+        policy =>
+        {
+            policy.RequireAuthenticatedUser();
+        });
+
+    options.AddPolicy(
+        AuthorizationPolicies.AdminOnly,
+        policy =>
+        {
+            policy.RequireRole(Roles.Admin);
+        });
+});
 
 builder.Services.AddApplicationServices();
 
