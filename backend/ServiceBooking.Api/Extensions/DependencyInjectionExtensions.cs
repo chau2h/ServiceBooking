@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Identity;
+using ServiceBooking.Api.Models;
 using ServiceBooking.Api.Repositories;
 using ServiceBooking.Api.Repositories.Interfaces;
 using ServiceBooking.Api.Services;
@@ -10,6 +12,10 @@ public static class DependencyInjectionExtensions
     public static IServiceCollection AddApplicationServices(
         this IServiceCollection services)
     {
+        // Authentication
+        services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+        services.AddScoped<IJwtTokenService, JwtTokenService>();
+
         // Repositories
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IServiceRepository, ServiceRepository>();

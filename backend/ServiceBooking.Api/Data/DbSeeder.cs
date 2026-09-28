@@ -1,5 +1,4 @@
-using System.Security.Cryptography;
-using System.Text;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using ServiceBooking.Api.Common.Enums;
 using ServiceBooking.Api.Models;
@@ -16,6 +15,9 @@ public static class DbSeeder
     private const string Staff2Email = "staff2@servicebooking.demo";
 
     private const string DemoPassword = "Demo@12345";
+
+    private static readonly IPasswordHasher<User> PasswordHasher =
+    new PasswordHasher<User>();
 
     public static async Task SeedAsync(AppDbContext context)
     {
@@ -87,11 +89,16 @@ public static class DbSeeder
                 {
                     FullName = definition.FullName,
                     Email = definition.Email,
-                    PasswordHash = CreatePasswordHash(DemoPassword),
                     Role = definition.Role,
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow
                 };
+
+                // Hash the demo password using the same ASP.NET Core
+                // PasswordHasher that will later be used by the login flow.
+                user.PasswordHash = CreatePasswordHash(
+                    user,
+                    DemoPassword);
 
                 await context.Set<User>().AddAsync(user);
             }
@@ -470,27 +477,13 @@ public static class DbSeeder
             .UtcDateTime;
     }
 
-    private static string CreatePasswordHash(string password)
+    private static string CreatePasswordHash(
+        User user,
+        string password)
     {
-        const int iterations = 100_000;
-        const int saltSize = 16;
-        const int keySize = 32;
-
-        var salt = RandomNumberGenerator.GetBytes(saltSize);
-
-        var hash = Rfc2898DeriveBytes.Pbkdf2(
-            Encoding.UTF8.GetBytes(password),
-            salt,
-            iterations,
-            HashAlgorithmName.SHA256,
-            keySize);
-
-        return string.Join(
-            '$',
-            "PBKDF2-SHA256",
-            iterations,
-            Convert.ToBase64String(salt),
-            Convert.ToBase64String(hash));
+        return PasswordHasher.HashPassword(
+            user,
+            password);
     }
 
     private sealed class BookingSeedDefinition
