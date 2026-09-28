@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using ServiceBooking.Api.Data;
+using ServiceBooking.Api.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,10 +19,11 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     )
 );
 
+builder.Services.AddApplicationServices();
+
 var app = builder.Build();
 
-// Seed demo data after the application has been built.
-// Database migration is intentionally not performed here.
+// Seed demo data.
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider
