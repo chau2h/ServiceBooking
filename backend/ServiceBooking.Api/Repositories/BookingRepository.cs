@@ -21,6 +21,19 @@ public sealed class BookingRepository(
                 cancellationToken);
     }
 
+    public async Task<Booking?> GetByIdWithDetailsAsync(
+        long id,
+        CancellationToken cancellationToken)
+    {
+        return await context.Set<Booking>()
+            .AsNoTracking()
+            .Include(booking => booking.Service)
+            .Include(booking => booking.Staff)
+            .FirstOrDefaultAsync(
+                booking => booking.Id == id,
+                cancellationToken);
+    }
+
     public async Task<bool> ExistsAsync(
         long id,
         CancellationToken cancellationToken = default)
@@ -109,5 +122,63 @@ public sealed class BookingRepository(
             .ToListAsync(cancellationToken);
 
         return (items, totalCount);
+    }
+
+    public async Task<(IReadOnlyList<Booking> Items, int TotalCount)> GetPagedAsync(
+        DateOnly? date,
+        BookingStatus? status,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken)
+    {
+        var query = context.Set<Booking>()
+            .AsNoTracking()
+            .Include(booking => booking.Service)
+            .Include(booking => booking.Staff)
+            .AsQueryable();
+
+        if (date.HasValue)
+        {
+            var (startUtc, endUtc) =
+                BusinessTime.GetUtcRangeForBusinessDate(date.Value);
+
+            query = query.Where(
+                booking => booking.StartTime >= startUtc &&
+                           booking.StartTime < endUtc);
+        }
+
+        if (status.HasValue)
+        {
+            query = query.Where(
+                booking => booking.Status == status.Value);
+        }
+
+        var totalCount = await query.CountAsync(cancellationToken);
+        var items = await query
+            .OrderByDescending(booking => booking.StartTime)
+            .ThenByDescending(booking => booking.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, totalCount);
+    }
+
+    public async Task<IReadOnlyList<Booking>> GetNonCancelledForStaffInRangeAsync(
+        long staffId,
+        DateTime startUtc,
+        DateTime endUtc,
+        CancellationToken cancellationToken)
+    {
+        return await context.Set<Booking>()
+            .AsNoTracking()
+            .Where(booking =>
+                booking.StaffId == staffId &&
+                booking.Status != BookingStatus.Cancelled &&
+                booking.StartTime < endUtc &&
+                booking.EndTime > startUtc)
+            .OrderBy(booking => booking.StartTime)
+            .ThenBy(booking => booking.Id)
+            .ToListAsync(cancellationToken);
     }
 }

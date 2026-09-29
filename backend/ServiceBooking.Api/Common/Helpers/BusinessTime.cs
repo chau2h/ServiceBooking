@@ -19,6 +19,19 @@ public static class BusinessTime
         return value.UtcDateTime;
     }
 
+    public static DateTime ToUtc(
+        DateOnly date,
+        TimeOnly time)
+    {
+        var localDateTime = DateTime.SpecifyKind(
+            date.ToDateTime(time),
+            DateTimeKind.Unspecified);
+
+        return TimeZoneInfo.ConvertTimeToUtc(
+            localDateTime,
+            VietnamTimeZone);
+    }
+
     public static DateOnly GetBusinessDate(
         DateTimeOffset value)
     {

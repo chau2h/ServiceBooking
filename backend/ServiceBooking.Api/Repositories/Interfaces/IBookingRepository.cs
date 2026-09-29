@@ -9,6 +9,10 @@ public interface IBookingRepository
         long id,
         CancellationToken cancellationToken);
 
+    Task<Booking?> GetByIdWithDetailsAsync(
+        long id,
+        CancellationToken cancellationToken);
+
     Task<bool> ExistsAsync(
         long id,
         CancellationToken cancellationToken);
@@ -32,5 +36,18 @@ public interface IBookingRepository
         BookingStatus? status,
         int page,
         int pageSize,
+        CancellationToken cancellationToken);
+
+    Task<(IReadOnlyList<Booking> Items, int TotalCount)> GetPagedAsync(
+        DateOnly? date,
+        BookingStatus? status,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<Booking>> GetNonCancelledForStaffInRangeAsync(
+        long staffId,
+        DateTime startUtc,
+        DateTime endUtc,
         CancellationToken cancellationToken);
 }

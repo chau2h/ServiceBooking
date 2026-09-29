@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using ServiceBooking.Api.Common.Enums;
+using ServiceBooking.Api.Common.Helpers;
 using ServiceBooking.Api.Models;
 
 namespace ServiceBooking.Api.Data;
@@ -235,7 +236,7 @@ public static class DbSeeder
         AppDbContext context,
         Dictionary<string, Staff> staffs)
     {
-        var baseDate = DateOnly.FromDateTime(DateTime.Now);
+        var baseDate = BusinessTime.GetBusinessDate(BusinessTime.Now);
 
         // The requirement asks for work schedules covering 7 days.
         // We create one 09:00-17:00 shift per staff for each day.
@@ -277,7 +278,7 @@ public static class DbSeeder
         Dictionary<string, Staff> staffs,
         Dictionary<string, Service> services)
     {
-        var baseDate = DateOnly.FromDateTime(DateTime.Now);
+        var baseDate = BusinessTime.GetBusinessDate(BusinessTime.Now);
 
         var customer1 = users[Customer1Email];
         var customer2 = users[Customer2Email];
