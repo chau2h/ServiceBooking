@@ -1,3 +1,4 @@
+using ServiceBooking.Api.Common.Enums;
 using ServiceBooking.Api.Common.Exceptions;
 using ServiceBooking.Api.Common.Helpers;
 using ServiceBooking.Api.DTOs.Bookings;
@@ -6,7 +7,7 @@ using ServiceBooking.Api.Services.Interfaces;
 
 namespace ServiceBooking.Api.Services;
 
-public sealed class BookingService(
+public class BookingService(
     IBookingRepository bookingRepository,
     IServiceRepository serviceRepository,
     IStaffRepository staffRepository,
@@ -14,11 +15,11 @@ public sealed class BookingService(
     : IBookingService
 {
     public async Task<BookingResponse> CreateBookingAsync(
-        long customerId,
+        int customerId,
         CreateBookingRequest request,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
-        // 1. Load Service.
+
         var service = await serviceRepository.GetByIdAsync(
             request.ServiceId,
             cancellationToken);
@@ -27,19 +28,18 @@ public sealed class BookingService(
         {
             throw new NotFoundException(
                 "SERVICE_NOT_FOUND",
-                $"Service with id {request.ServiceId} was not found.");
+                "The selected service was not found.");
         }
-
-        // Rule 5.2:
+        
         // A disabled service cannot be booked.
         if (!service.IsActive)
         {
             throw new BadRequestException(
                 "SERVICE_INACTIVE",
-                "The selected service is currently unavailable.");
+                "The selected service is inactive.");
         }
 
-        // 2. Load Staff.
+
         var staff = await staffRepository.GetByIdAsync(
             request.StaffId,
             cancellationToken);
@@ -48,53 +48,44 @@ public sealed class BookingService(
         {
             throw new NotFoundException(
                 "STAFF_NOT_FOUND",
-                $"Staff with id {request.StaffId} was not found.");
+                "The selected staff was not found.");
         }
-
-        // Rule 5.2:
+       
         // A disabled staff member cannot receive bookings.
         if (!staff.IsActive)
         {
             throw new BadRequestException(
                 "STAFF_INACTIVE",
-                "The selected staff member is currently unavailable.");
+                "The selected staff is inactive.");
         }
 
-        // 3. Rule 5.2:
         // Booking must not start in the past.
-        var now = BusinessTime.Now;
-
-        if (request.StartTime < now)
+        if (request.StartTime < BusinessTime.Now)
         {
             throw new BadRequestException(
                 "BOOKING_IN_PAST",
                 "Booking start time cannot be in the past.");
         }
 
-        // 4. Rule 5.1:
         // EndTime is calculated exclusively on the backend.
         var endTime = BookingTimeCalculator.CalculateEndTime(
             request.StartTime,
             service.DurationMinutes);
 
-        // 5. Convert the booking timestamp to business-local date.
-        var workDate =
-            BusinessTime.GetBusinessDate(request.StartTime);
+        var businessDate = BusinessTime.GetBusinessDate(request.StartTime);
 
-        var schedules =
-            await workScheduleRepository.GetByStaffAndDateAsync(
-                request.StaffId,
-                workDate,
-                cancellationToken);
+        var schedules = await workScheduleRepository.GetByStaffAndDateAsync(
+            request.StaffId,
+            businessDate,
+            cancellationToken);
 
         if (schedules.Count == 0)
         {
             throw new BadRequestException(
-                "NO_WORK_SCHEDULE",
-                "The selected staff member has no work schedule for this date.");
+                "STAFF_NOT_WORKING",
+                "The selected staff has no work schedule for the selected date.");
         }
 
-        // 6. Rule 5.2:
         // The entire booking must fit inside one work schedule.
         var isWithinSchedule =
             BookingScheduleValidator.IsWithinSchedule(
@@ -105,11 +96,10 @@ public sealed class BookingService(
         if (!isWithinSchedule)
         {
             throw new BadRequestException(
-                "OUTSIDE_WORK_SCHEDULE",
-                "The booking must be completely within the staff's working hours.");
+                "BOOKING_OUTSIDE_WORKING_HOURS",
+                "The booking must be completely within the staff working hours.");
         }
 
-        // 7. Rule 5.3:
         // Conflict checking is performed against UTC DateTime values
         // because Booking.StartTime/EndTime are persisted as UTC.
         var newStartUtc = request.StartTime.UtcDateTime;
@@ -129,7 +119,53 @@ public sealed class BookingService(
                 "The selected time slot is already booked.");
         }
 
-        // Booking creation itself will be implemented next.
-        throw new NotImplementedException();
+        var booking = new Models.Booking
+        {
+            BookingCode = BookingCodeGenerator.Generate(),
+
+            CustomerId = customerId,
+            ServiceId = request.ServiceId,
+            StaffId = request.StaffId,
+
+            StartTime = newStartUtc,
+            EndTime = newEndUtc,
+
+            Status = BookingStatus.Pending,
+
+            CustomerNote = request.CustomerNote,
+            CancellationReason = null,
+
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await bookingRepository.AddAsync(
+            booking,
+            cancellationToken);
+
+        await bookingRepository.SaveChangesAsync(
+            cancellationToken);
+
+        return new BookingResponse
+        {
+            Id = booking.Id,
+            BookingCode = booking.BookingCode,
+
+            CustomerId = booking.CustomerId,
+            ServiceId = booking.ServiceId,
+            StaffId = booking.StaffId,
+
+            ServiceName = service.Name,
+            StaffName = staff.FullName,
+
+            StartTime = booking.StartTime,
+            EndTime = booking.EndTime,
+
+            Status = booking.Status,
+
+            CustomerNote = booking.CustomerNote,
+            CancellationReason = booking.CancellationReason,
+
+            CreatedAt = booking.CreatedAt
+        };
     }
 }

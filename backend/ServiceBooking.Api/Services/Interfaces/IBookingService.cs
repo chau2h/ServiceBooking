@@ -5,7 +5,7 @@ namespace ServiceBooking.Api.Services.Interfaces;
 public interface IBookingService
 {
     Task<BookingResponse> CreateBookingAsync(
-        long customerId,
+        int customerId,
         CreateBookingRequest request,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken);
 }
