@@ -26,4 +26,24 @@ public class StaffRepository(AppDbContext context) : IStaffRepository
                 staff => staff.Id == id,
                 cancellationToken);
     }
+
+    public async Task<IReadOnlyList<Staff>> GetAllAsync(
+        bool? isActive,
+        CancellationToken cancellationToken = default)
+    {
+        IQueryable<Staff> query = context.Set<Staff>()
+            .AsNoTracking();
+
+        if (isActive.HasValue)
+        {
+            query = query.Where(staff =>
+                staff.IsActive == isActive.Value);
+        }
+
+        return await query
+            // Stable ordering for a predictable API response.
+            .OrderBy(staff => staff.FullName)
+            .ThenBy(staff => staff.Id)
+            .ToListAsync(cancellationToken);
+    }
 }

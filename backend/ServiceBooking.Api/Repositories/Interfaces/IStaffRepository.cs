@@ -11,4 +11,8 @@ public interface IStaffRepository
     Task<bool> ExistsAsync(
         long id,
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<Staff>> GetAllAsync(
+        bool? isActive,
+        CancellationToken cancellationToken = default);
 }
