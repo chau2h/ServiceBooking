@@ -12,7 +12,8 @@ public class BookingService(
     IBookingRepository bookingRepository,
     IServiceRepository serviceRepository,
     IStaffRepository staffRepository,
-    IWorkScheduleRepository workScheduleRepository)
+    IWorkScheduleRepository workScheduleRepository,
+    TimeProvider timeProvider)
     : IBookingService
 {
     public async Task<BookingResponse> CreateBookingAsync(
@@ -61,7 +62,7 @@ public class BookingService(
         }
 
         // Booking must not start in the past.
-        if (request.StartTime < BusinessTime.Now)
+        if (request.StartTime < timeProvider.GetUtcNow())
         {
             throw new BadRequestException(
                 "BOOKING_IN_PAST",
@@ -136,7 +137,7 @@ public class BookingService(
             CustomerNote = request.CustomerNote,
             CancellationReason = null,
 
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = timeProvider.GetUtcNow().UtcDateTime
         };
 
         await bookingRepository.AddAsync(
@@ -322,7 +323,7 @@ public class BookingService(
                 dayEndUtc,
                 cancellationToken);
 
-        var nowUtc = DateTime.UtcNow;
+        var nowUtc = timeProvider.GetUtcNow().UtcDateTime;
         var availableSlots = new List<AvailableSlotResponse>();
 
         foreach (var schedule in schedules)
@@ -417,7 +418,7 @@ public class BookingService(
                 "This booking cannot be cancelled in its current status.");
         }
 
-        if (booking.StartTime <= DateTime.UtcNow)
+        if (booking.StartTime <= timeProvider.GetUtcNow().UtcDateTime)
         {
             throw new BadRequestException(
                 "BOOKING_ALREADY_STARTED",

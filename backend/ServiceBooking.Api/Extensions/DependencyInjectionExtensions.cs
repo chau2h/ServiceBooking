@@ -12,6 +12,8 @@ public static class DependencyInjectionExtensions
     public static IServiceCollection AddApplicationServices(
         this IServiceCollection services)
     {
+        services.AddSingleton(TimeProvider.System);
+
         // Authentication
         services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
