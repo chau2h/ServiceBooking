@@ -77,8 +77,7 @@ public sealed class BookingService(
             request.StartTime,
             service.DurationMinutes);
 
-        // 5. Convert booking timestamps to Vietnam business time
-        // to compare against WorkSchedule's Date/Time fields.
+        // 5. Convert the booking timestamp to business-local date.
         var workDate =
             BusinessTime.GetBusinessDate(request.StartTime);
 
@@ -96,7 +95,7 @@ public sealed class BookingService(
         }
 
         // 6. Rule 5.2:
-        // The ENTIRE booking interval must fit inside a work schedule.
+        // The entire booking must fit inside one work schedule.
         var isWithinSchedule =
             BookingScheduleValidator.IsWithinSchedule(
                 request.StartTime,
@@ -110,7 +109,27 @@ public sealed class BookingService(
                 "The booking must be completely within the staff's working hours.");
         }
 
-        // Rule 5.3 will be added in the next step.
+        // 7. Rule 5.3:
+        // Conflict checking is performed against UTC DateTime values
+        // because Booking.StartTime/EndTime are persisted as UTC.
+        var newStartUtc = request.StartTime.UtcDateTime;
+        var newEndUtc = endTime.UtcDateTime;
+
+        var hasConflict =
+            await bookingRepository.ExistsConflictAsync(
+                request.StaffId,
+                newStartUtc,
+                newEndUtc,
+                cancellationToken);
+
+        if (hasConflict)
+        {
+            throw new ConflictException(
+                "BOOKING_CONFLICT",
+                "The selected time slot is already booked.");
+        }
+
+        // Booking creation itself will be implemented next.
         throw new NotImplementedException();
     }
 }
