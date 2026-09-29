@@ -9,6 +9,15 @@ public interface IStaffService
         StaffQueryParameters query,
         CancellationToken cancellationToken = default);
 
+    Task<StaffResponse> CreateStaffAsync(
+        CreateStaffRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<StaffResponse> UpdateStaffAsync(
+        long id,
+        UpdateStaffRequest request,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<ScheduleResponse>> GetSchedulesAsync(
         long staffId,
         CancellationToken cancellationToken = default);

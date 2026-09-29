@@ -27,6 +27,16 @@ public class StaffRepository(AppDbContext context) : IStaffRepository
                 cancellationToken);
     }
 
+    public async Task<Staff?> GetByEmailAsync(
+        string email,
+        CancellationToken cancellationToken = default)
+    {
+        return await context.Set<Staff>()
+            .FirstOrDefaultAsync(
+                staff => staff.Email == email,
+                cancellationToken);
+    }
+
     public async Task<IReadOnlyList<Staff>> GetAllAsync(
         bool? isActive,
         CancellationToken cancellationToken = default)
@@ -41,9 +51,22 @@ public class StaffRepository(AppDbContext context) : IStaffRepository
         }
 
         return await query
-            // Stable ordering for a predictable API response.
             .OrderBy(staff => staff.FullName)
             .ThenBy(staff => staff.Id)
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task AddAsync(
+        Staff staff,
+        CancellationToken cancellationToken = default)
+    {
+        await context.Set<Staff>()
+            .AddAsync(staff, cancellationToken);
+    }
+
+    public async Task SaveChangesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        await context.SaveChangesAsync(cancellationToken);
     }
 }

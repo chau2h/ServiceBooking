@@ -25,6 +25,97 @@ public sealed class StaffService(
             .ToList();
     }
 
+    public async Task<StaffResponse> CreateStaffAsync(
+        CreateStaffRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var fullName = NormalizeRequiredText(
+            request.FullName,
+            "STAFF_NAME_REQUIRED",
+            "Staff full name is required.");
+
+        var email = NormalizeEmail(request.Email);
+
+        var existingStaff =
+            await staffRepository.GetByEmailAsync(
+                email,
+                cancellationToken);
+
+        if (existingStaff is not null)
+        {
+            throw new ConflictException(
+                "STAFF_EMAIL_EXISTS",
+                "A staff member with this email already exists.");
+        }
+
+        var staff = new Staff
+        {
+            FullName = fullName,
+            Email = email,
+            IsActive = request.IsActive,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        await staffRepository.AddAsync(
+            staff,
+            cancellationToken);
+
+        await staffRepository.SaveChangesAsync(
+            cancellationToken);
+
+        return MapToStaffResponse(staff);
+    }
+
+    public async Task<StaffResponse> UpdateStaffAsync(
+        long id,
+        UpdateStaffRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var fullName = NormalizeRequiredText(
+            request.FullName,
+            "STAFF_NAME_REQUIRED",
+            "Staff full name is required.");
+
+        var email = NormalizeEmail(request.Email);
+
+        var staff = await staffRepository.GetByIdAsync(
+            id,
+            cancellationToken);
+
+        if (staff is null)
+        {
+            throw new NotFoundException(
+                "STAFF_NOT_FOUND",
+                $"Staff with id {id} was not found.");
+        }
+
+        var existingStaff =
+            await staffRepository.GetByEmailAsync(
+                email,
+                cancellationToken);
+
+        // An unchanged email belongs to this same Staff and is valid.
+        // A different Staff using the same email is a conflict.
+        if (existingStaff is not null &&
+            existingStaff.Id != id)
+        {
+            throw new ConflictException(
+                "STAFF_EMAIL_EXISTS",
+                "A staff member with this email already exists.");
+        }
+
+        staff.FullName = fullName;
+        staff.Email = email;
+        staff.IsActive = request.IsActive;
+        staff.UpdatedAt = DateTime.UtcNow;
+
+        await staffRepository.SaveChangesAsync(
+            cancellationToken);
+
+        return MapToStaffResponse(staff);
+    }
+
     public async Task<IReadOnlyList<ScheduleResponse>> GetSchedulesAsync(
         long staffId,
         CancellationToken cancellationToken = default)
@@ -113,6 +204,33 @@ public sealed class StaffService(
                 "INVALID_SCHEDULE_TIME",
                 "StartTime must be earlier than EndTime.");
         }
+    }
+
+    private static string NormalizeRequiredText(
+        string value,
+        string errorCode,
+        string errorMessage)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw new BadRequestException(
+                errorCode,
+                errorMessage);
+        }
+
+        return value.Trim();
+    }
+
+    private static string NormalizeEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            throw new BadRequestException(
+                "STAFF_EMAIL_REQUIRED",
+                "Staff email is required.");
+        }
+
+        return email.Trim().ToLowerInvariant();
     }
 
     private static StaffResponse MapToStaffResponse(
