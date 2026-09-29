@@ -1,6 +1,7 @@
 using ServiceBooking.Api.Common.Enums;
 using ServiceBooking.Api.Common.Exceptions;
 using ServiceBooking.Api.Common.Helpers;
+using ServiceBooking.Api.Common.Responses;
 using ServiceBooking.Api.DTOs.Bookings;
 using ServiceBooking.Api.Repositories.Interfaces;
 using ServiceBooking.Api.Services.Interfaces;
@@ -15,7 +16,7 @@ public class BookingService(
     : IBookingService
 {
     public async Task<BookingResponse> CreateBookingAsync(
-        int customerId,
+        long customerId,
         CreateBookingRequest request,
         CancellationToken cancellationToken)
     {
@@ -166,6 +167,70 @@ public class BookingService(
             CancellationReason = booking.CancellationReason,
 
             CreatedAt = booking.CreatedAt
+        };
+    }
+
+    public async Task<PagedResult<BookingResponse>> GetMyBookingsAsync(
+        long customerId,
+        BookingQueryParameters parameters,
+        CancellationToken cancellationToken)
+    {
+        if (parameters.Page < 1)
+        {
+            throw new BadRequestException(
+                "INVALID_PAGE",
+                "Page must be greater than or equal to 1.");
+        }
+
+        if (parameters.PageSize < 1 || parameters.PageSize > 100)
+        {
+            throw new BadRequestException(
+                "INVALID_PAGE_SIZE",
+                "PageSize must be between 1 and 100.");
+        }
+
+        var (items, totalCount) =
+            await bookingRepository.GetMyBookingsAsync(
+                customerId,
+                parameters.Date,
+                parameters.Status,
+                parameters.Page,
+                parameters.PageSize,
+                cancellationToken);
+
+        var responses = items
+            .Select(booking => new BookingResponse
+            {
+                Id = booking.Id,
+                BookingCode = booking.BookingCode,
+
+                CustomerId = booking.CustomerId,
+                ServiceId = booking.ServiceId,
+                StaffId = booking.StaffId,
+
+                ServiceName = booking.Service.Name,
+                StaffName = booking.Staff.FullName,
+
+                StartTime = booking.StartTime,
+                EndTime = booking.EndTime,
+
+                Status = booking.Status,
+
+                CustomerNote = booking.CustomerNote,
+                CancellationReason = booking.CancellationReason,
+
+                CreatedAt = booking.CreatedAt
+            })
+            .ToList();
+
+        return new PagedResult<BookingResponse>
+        {
+            Items = responses,
+            Page = parameters.Page,
+            PageSize = parameters.PageSize,
+            TotalItems = totalCount,
+            TotalPages = (int)Math.Ceiling(
+                totalCount / (double)parameters.PageSize)
         };
     }
 }

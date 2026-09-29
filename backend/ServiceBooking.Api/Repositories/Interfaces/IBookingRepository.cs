@@ -1,3 +1,4 @@
+using ServiceBooking.Api.Common.Enums;
 using ServiceBooking.Api.Models;
 
 namespace ServiceBooking.Api.Repositories.Interfaces;
@@ -6,22 +7,30 @@ public interface IBookingRepository
 {
     Task<Booking?> GetByIdAsync(
         long id,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken);
 
     Task<bool> ExistsAsync(
         long id,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken);
 
     Task<bool> ExistsConflictAsync(
         long staffId,
         DateTime newStartTime,
         DateTime newEndTime,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken);
 
     Task AddAsync(
         Booking booking,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken);
 
     Task SaveChangesAsync(
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken);
+
+    Task<(IReadOnlyList<Booking> Items, int TotalCount)> GetMyBookingsAsync(
+        long customerId,
+        DateOnly? date,
+        BookingStatus? status,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken);
 }

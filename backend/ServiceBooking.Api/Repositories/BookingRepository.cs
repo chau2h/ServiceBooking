@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using ServiceBooking.Api.Common.Enums;
+using ServiceBooking.Api.Common.Helpers;
 using ServiceBooking.Api.Data;
 using ServiceBooking.Api.Models;
 using ServiceBooking.Api.Repositories.Interfaces;
@@ -63,5 +65,49 @@ public sealed class BookingRepository(
         CancellationToken cancellationToken = default)
     {
         await context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<(IReadOnlyList<Booking> Items, int TotalCount)> GetMyBookingsAsync(
+        long customerId,
+        DateOnly? date,
+        BookingStatus? status,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken)
+    {
+        var query = context.Set<Booking>()
+            .AsNoTracking()
+            .Include(booking => booking.Service)
+            .Include(booking => booking.Staff)
+            .Where(booking => booking.CustomerId == customerId);
+
+        if (date.HasValue)
+        {
+            var (startUtc, endUtc) =
+                BusinessTime.GetUtcRangeForBusinessDate(date.Value);
+
+            query = query.Where(
+                booking =>
+                    booking.StartTime >= startUtc &&
+                    booking.StartTime < endUtc);
+        }
+
+        if (status.HasValue)
+        {
+            query = query.Where(
+                booking => booking.Status == status.Value);
+        }
+
+        var totalCount = await query.CountAsync(
+            cancellationToken);
+
+        var items = await query
+            .OrderByDescending(booking => booking.CreatedAt)
+            .ThenByDescending(booking => booking.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, totalCount);
     }
 }

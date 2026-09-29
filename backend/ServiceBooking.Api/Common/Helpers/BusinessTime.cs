@@ -40,4 +40,21 @@ public static class BusinessTime
         return TimeOnly.FromDateTime(
             local.DateTime);
     }
+
+    public static (DateTime StartUtc, DateTime EndUtc) GetUtcRangeForBusinessDate(
+        DateOnly date)
+    {
+        var localStart = date.ToDateTime(TimeOnly.MinValue);
+        var localEnd = date.AddDays(1).ToDateTime(TimeOnly.MinValue);
+
+        var startUtc = TimeZoneInfo.ConvertTimeToUtc(
+            localStart,
+            VietnamTimeZone);
+
+        var endUtc = TimeZoneInfo.ConvertTimeToUtc(
+            localEnd,
+            VietnamTimeZone);
+
+        return (startUtc, endUtc);
+    }
 }
