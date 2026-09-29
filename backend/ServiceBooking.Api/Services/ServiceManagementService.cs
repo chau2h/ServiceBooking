@@ -15,6 +15,8 @@ public sealed class ServiceManagementService(
         ServiceQueryParameters query,
         CancellationToken cancellationToken = default)
     {
+        ValidateQueryParameters(query);
+
         var result = await serviceRepository.GetPagedAsync(
             query.Search,
             query.IsActive,
@@ -89,8 +91,10 @@ public sealed class ServiceManagementService(
         }
 
         service.Name = request.Name.Trim();
+
         service.Description = NormalizeDescription(
             request.Description);
+
         service.DurationMinutes = request.DurationMinutes;
         service.Price = request.Price;
         service.IsActive = request.IsActive;
@@ -100,6 +104,32 @@ public sealed class ServiceManagementService(
             cancellationToken);
 
         return MapToResponse(service);
+    }
+
+    private static void ValidateQueryParameters(
+        ServiceQueryParameters query)
+    {
+        if (query.Page < 1)
+        {
+            throw new BadRequestException(
+                "INVALID_PAGE",
+                "Page must be greater than or equal to 1.");
+        }
+
+        if (query.PageSize is < 1 or > 100)
+        {
+            throw new BadRequestException(
+                "INVALID_PAGE_SIZE",
+                "PageSize must be between 1 and 100.");
+        }
+
+        if (query.Search is not null &&
+            query.Search.Length > 150)
+        {
+            throw new BadRequestException(
+                "INVALID_SEARCH",
+                "Search cannot exceed 150 characters.");
+        }
     }
 
     private static void ValidateServiceRequest(
