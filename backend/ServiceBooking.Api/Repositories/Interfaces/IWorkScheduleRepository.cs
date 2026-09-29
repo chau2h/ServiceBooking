@@ -8,6 +8,11 @@ public interface IWorkScheduleRepository
         long staffId,
         CancellationToken cancellationToken = default);
 
+    Task<List<WorkSchedule>> GetByStaffAndDateAsync(
+        long staffId,
+        DateOnly workDate,
+        CancellationToken cancellationToken = default);
+
     Task<bool> ExistsOverlapAsync(
         long staffId,
         DateOnly workDate,

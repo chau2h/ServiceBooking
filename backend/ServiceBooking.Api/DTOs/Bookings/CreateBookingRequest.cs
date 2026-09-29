@@ -11,7 +11,7 @@ public sealed class CreateBookingRequest
     public long StaffId { get; init; }
 
     [Required]
-    public DateTime StartTime { get; init; }
+    public DateTimeOffset StartTime { get; init; }
 
     [MaxLength(1000)]
     public string? CustomerNote { get; init; }

@@ -22,6 +22,21 @@ public class WorkScheduleRepository(AppDbContext context)
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<List<WorkSchedule>> GetByStaffAndDateAsync(
+        long staffId,
+        DateOnly workDate,
+        CancellationToken cancellationToken = default)
+    {
+        return await context.Set<WorkSchedule>()
+            .AsNoTracking()
+            .Where(schedule =>
+                schedule.StaffId == staffId &&
+                schedule.WorkDate == workDate)
+            .OrderBy(schedule => schedule.StartTime)
+            .ThenBy(schedule => schedule.Id)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<bool> ExistsOverlapAsync(
         long staffId,
         DateOnly workDate,

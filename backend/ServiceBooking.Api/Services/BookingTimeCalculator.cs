@@ -4,8 +4,8 @@ namespace ServiceBooking.Api.Services;
 
 public static class BookingTimeCalculator
 {
-    public static DateTime CalculateEndTime(
-        DateTime startTime,
+    public static DateTimeOffset CalculateEndTime(
+        DateTimeOffset startTime,
         int durationMinutes)
     {
         if (durationMinutes <= 0)
@@ -21,8 +21,6 @@ public static class BookingTimeCalculator
         }
         catch (ArgumentOutOfRangeException)
         {
-            // Protect the API from an invalid DateTime range,
-            // for example a timestamp too close to DateTime.MaxValue.
             throw new BadRequestException(
                 "INVALID_BOOKING_TIME",
                 "The booking time is outside the supported date range.");
