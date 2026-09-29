@@ -1,3 +1,4 @@
+using ServiceBooking.Api.Common.Exceptions;
 using ServiceBooking.Api.Common.Responses;
 using ServiceBooking.Api.DTOs.Services;
 using ServiceBooking.Api.Models;
@@ -33,6 +34,107 @@ public sealed class ServiceManagementService(
             TotalItems = result.TotalItems,
             TotalPages = result.TotalPages
         };
+    }
+
+    public async Task<ServiceResponse> CreateServiceAsync(
+        CreateServiceRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateServiceRequest(
+            request.Name,
+            request.DurationMinutes,
+            request.Price);
+
+        var service = new Service
+        {
+            Name = request.Name.Trim(),
+            Description = NormalizeDescription(
+                request.Description),
+            DurationMinutes = request.DurationMinutes,
+            Price = request.Price,
+            IsActive = request.IsActive,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        await serviceRepository.AddAsync(
+            service,
+            cancellationToken);
+
+        await serviceRepository.SaveChangesAsync(
+            cancellationToken);
+
+        return MapToResponse(service);
+    }
+
+    public async Task<ServiceResponse> UpdateServiceAsync(
+        long id,
+        UpdateServiceRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateServiceRequest(
+            request.Name,
+            request.DurationMinutes,
+            request.Price);
+
+        var service = await serviceRepository.GetByIdAsync(
+            id,
+            cancellationToken);
+
+        if (service is null)
+        {
+            throw new NotFoundException(
+                "SERVICE_NOT_FOUND",
+                $"Service with id {id} was not found.");
+        }
+
+        service.Name = request.Name.Trim();
+        service.Description = NormalizeDescription(
+            request.Description);
+        service.DurationMinutes = request.DurationMinutes;
+        service.Price = request.Price;
+        service.IsActive = request.IsActive;
+        service.UpdatedAt = DateTime.UtcNow;
+
+        await serviceRepository.SaveChangesAsync(
+            cancellationToken);
+
+        return MapToResponse(service);
+    }
+
+    private static void ValidateServiceRequest(
+        string name,
+        int durationMinutes,
+        decimal price)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new BadRequestException(
+                "SERVICE_NAME_REQUIRED",
+                "Service name is required.");
+        }
+
+        if (durationMinutes <= 0)
+        {
+            throw new BadRequestException(
+                "INVALID_SERVICE_DURATION",
+                "DurationMinutes must be greater than zero.");
+        }
+
+        if (price < 0)
+        {
+            throw new BadRequestException(
+                "INVALID_SERVICE_PRICE",
+                "Price cannot be negative.");
+        }
+    }
+
+    private static string? NormalizeDescription(
+        string? description)
+    {
+        return string.IsNullOrWhiteSpace(description)
+            ? null
+            : description.Trim();
     }
 
     private static ServiceResponse MapToResponse(

@@ -19,4 +19,11 @@ public interface IServiceRepository
         int page,
         int pageSize,
         CancellationToken cancellationToken = default);
+
+    Task AddAsync(
+        Service service,
+        CancellationToken cancellationToken = default);
+
+    Task SaveChangesAsync(
+        CancellationToken cancellationToken = default);
 }

@@ -57,7 +57,6 @@ public class ServiceRepository(AppDbContext context) : IServiceRepository
         }
 
         // Count is executed by PostgreSQL.
-        // We do NOT load all rows into memory before pagination.
         var totalItems = await query.CountAsync(
             cancellationToken);
 
@@ -80,5 +79,19 @@ public class ServiceRepository(AppDbContext context) : IServiceRepository
             TotalItems = totalItems,
             TotalPages = totalPages
         };
+    }
+
+    public async Task AddAsync(
+        Service service,
+        CancellationToken cancellationToken = default)
+    {
+        await context.Set<Service>()
+            .AddAsync(service, cancellationToken);
+    }
+
+    public async Task SaveChangesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        await context.SaveChangesAsync(cancellationToken);
     }
 }
