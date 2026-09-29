@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ServiceBooking.Api.Common.Constants;
+using ServiceBooking.Api.DTOs.Schedules;
 using ServiceBooking.Api.DTOs.Staffs;
 using ServiceBooking.Api.Services.Interfaces;
 
@@ -28,5 +29,57 @@ public sealed class StaffsController(
             cancellationToken);
 
         return Ok(response);
+    }
+
+    [HttpGet("{id:long}/schedules")]
+    [ProducesResponseType(
+        typeof(IReadOnlyList<ScheduleResponse>),
+        StatusCodes.Status200OK)]
+    [ProducesResponseType(
+        StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(
+        StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IReadOnlyList<ScheduleResponse>>>
+        GetSchedules(
+            long id,
+            CancellationToken cancellationToken)
+    {
+        var response = await staffService.GetSchedulesAsync(
+            id,
+            cancellationToken);
+
+        return Ok(response);
+    }
+
+    [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
+    [HttpPost("{id:long}/schedules")]
+    [ProducesResponseType(
+        typeof(ScheduleResponse),
+        StatusCodes.Status201Created)]
+    [ProducesResponseType(
+        StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(
+        StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(
+        StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(
+        StatusCodes.Status404NotFound)]
+    [ProducesResponseType(
+        StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<ScheduleResponse>>
+        CreateSchedule(
+            long id,
+            [FromBody] CreateScheduleRequest request,
+            CancellationToken cancellationToken)
+    {
+        var response =
+            await staffService.CreateScheduleAsync(
+                id,
+                request,
+                cancellationToken);
+
+        return StatusCode(
+            StatusCodes.Status201Created,
+            response);
     }
 }
